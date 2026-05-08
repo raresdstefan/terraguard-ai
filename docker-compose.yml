@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DATABASE_URL=mongodb://mongo:27017
+    depends_on:
+      - rabbitmq
+      - mongo
+
+  ml-service:
+    build: ./ml-service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ml-service:/app
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
