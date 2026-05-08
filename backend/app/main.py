@@ -1,18 +1,26 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.api.routes import router
-from app.consumers.sensor_consumer import start_consumer
-import threading
+from app.api.predictions import router as prediction_router
 
 app = FastAPI(title="TerraGuard AI")
 
-app.include_router(router)
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.on_event("startup")
-def startup_event():
-    thread = threading.Thread(target=start_consumer)
-    thread.daemon = True
-    thread.start()
+# Routes
+app.include_router(router)
+app.include_router(prediction_router)
 
 @app.get("/")
 def root():
-    return {"message": "TerraGuard AI Backend Running"}
+    return {
+        "message": "TerraGuard AI Backend Running"
+    }
