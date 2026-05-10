@@ -1,8 +1,8 @@
 import pandas as pd
-from scikit-learn.model_selection import train_test_split
-from scikit-learn.ensemble import RandomForestClassifier
-from scikit-learn.metrics import classification_report
-from scikit-learn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import LabelEncoder
 import joblib
 
 # Load dataset

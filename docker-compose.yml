@@ -11,8 +11,10 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - DATABASE_URL=mongodb://mongo:27017
     depends_on:
-      - rabbitmq
-      - mongo
+      rabbitmq:
+        condition: service_healthy
+      mongo:
+        condition: service_started
 
   ml-service:
     build: ./ml-service
@@ -33,8 +35,14 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   mongo:
-    image: mongo
+    image: mongo:6.0
     ports:
       - "27017:27017"
