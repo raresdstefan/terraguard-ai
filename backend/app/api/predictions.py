@@ -5,9 +5,13 @@ from app.services.sensor_service import generate_fake_sensor_data
 
 router = APIRouter()
 
+
 @router.get("/predict/live")
 def predict_live():
-
+    """
+    Generate a live sensor reading (8 parameters) and run ML inference.
+    Returns sensor data + soil quality prediction + crop recommendation.
+    """
     sensor_data = generate_fake_sensor_data()
 
     response = requests.post(
@@ -19,5 +23,5 @@ def predict_live():
 
     return {
         "sensor_data": sensor_data,
-        "prediction": prediction
+        "prediction":  prediction,
     }
