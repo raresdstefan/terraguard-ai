@@ -1,12 +1,22 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
 from app.api.predictions import router as prediction_router
+from app.database import init_db
 
-app = FastAPI(title="TerraGuard AI")
 
-# CORS
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Inițializare tabele la startup."""
+    await init_db()
+    yield
+
+
+app = FastAPI(title="TerraGuard AI", lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,12 +25,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routes
 app.include_router(router)
 app.include_router(prediction_router)
 
+
 @app.get("/")
 def root():
-    return {
-        "message": "TerraGuard AI Backend Running"
-    }
+    return {"message": "TerraGuard AI Backend Running"}

@@ -1,7 +1,14 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pika
-pymongo
 requests
 faker
 python-dotenv
+
+# PostgreSQL async
+sqlalchemy[asyncio]>=2.0
+asyncpg
+greenlet
+
+# Serial (pentru modul USB cu ESP32)
+pyserial
