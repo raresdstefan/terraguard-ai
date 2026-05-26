@@ -7,7 +7,7 @@ app = FastAPI(title="TerraGuard ML Service")
 
 
 class SensorData(BaseModel):
-    field_id:    Optional[str]   = None
+    field_id:    Optional[str]   = "field-001"
     # Luminosity sensor
     luminosity:  float           = 400.0
     # 7-in-1 soil sensor

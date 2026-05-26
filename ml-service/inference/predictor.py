@@ -8,7 +8,6 @@ Accepts all 8 sensor parameters:
 
 import joblib
 import numpy as np
-
 model   = joblib.load("models/soil_quality_model.pkl")
 encoder = joblib.load("models/label_encoder.pkl")
 
@@ -89,16 +88,17 @@ def get_crop_recommendation(data):
 # ─────────────────────────────────────────────
 
 def predict_soil_quality(data):
-    features = np.array([[
-        data.get("luminosity",  400),
-        data.get("N",           100),
-        data.get("P",            50),
-        data.get("K",           120),
-        data.get("ph",          6.5),
-        data.get("EC",          1.0),
-        data.get("humidity",     55),
-        data.get("temperature",  22),
-    ]])
+    import pandas as pd
+    features = pd.DataFrame([{
+        "luminosity":  data.get("luminosity",  400),
+        "N":           data.get("N",           100),
+        "P":           data.get("P",            50),
+        "K":           data.get("K",           120),
+        "ph":          data.get("ph",          6.5),
+        "EC":          data.get("EC",          1.0),
+        "humidity":    data.get("humidity",     55),
+        "temperature": data.get("temperature",  22),
+}])
 
     prediction   = model.predict(features)[0]
     probabilities = model.predict_proba(features)[0]

@@ -16,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.sensor_service import generate_fake_sensor_data
 from app.database import get_session, SensorReading
+from app.api.routes import LATEST_ESP32_DATA
+from sqlalchemy import select, desc
 
 logger = logging.getLogger("predictions")
 router = APIRouter()
@@ -25,16 +27,22 @@ ML_SERVICE_URL = os.getenv("ML_SERVICE_URL", "http://ml-service:8001")
 
 def _call_ml(sensor_dict: dict) -> dict:
     try:
+        def val(key, alt_key=None, default=0.0):
+            v = sensor_dict.get(key)
+            if v is None and alt_key:
+                v = sensor_dict.get(alt_key)
+            return float(v) if v is not None else default
+
         payload = {
             "field_id":    sensor_dict.get("field_id"),
-            "luminosity":  sensor_dict.get("luminosity", 400.0),
-            "N":           sensor_dict.get("N") or sensor_dict.get("nitrogen", 100.0),
-            "P":           sensor_dict.get("P") or sensor_dict.get("phosphorus", 50.0),
-            "K":           sensor_dict.get("K") or sensor_dict.get("potassium", 120.0),
-            "ph":          sensor_dict.get("ph", 6.5),
-            "EC":          sensor_dict.get("EC") or sensor_dict.get("ec", 1.0),
-            "humidity":    sensor_dict.get("humidity", 55.0),
-            "temperature": sensor_dict.get("temperature", 22.0),
+            "luminosity":  val("luminosity",  default=400.0),
+            "N":           val("N",  "nitrogen",   default=100.0),
+            "P":           val("P",  "phosphorus",  default=50.0),
+            "K":           val("K",  "potassium",  default=120.0),
+            "ph":          val("ph",              default=6.5),
+            "EC":          val("EC", "ec",         default=1.0),
+            "humidity":    val("humidity",         default=55.0),
+            "temperature": val("temperature",      default=22.0),
         }
         resp = requests.post(f"{ML_SERVICE_URL}/predict", json=payload, timeout=5)
         resp.raise_for_status()
@@ -69,12 +77,40 @@ async def _save_reading(db, sensor, prediction=None, source="simulated"):
 
 @router.get("/predict/live")
 async def predict_live(db: AsyncSession = Depends(get_session)):
-    """
-    Generează date simulate, rulează ML inference și salvează în PostgreSQL.
-    """
-    sensor_data = generate_fake_sensor_data()
-    prediction  = _call_ml(sensor_data)
-    reading     = await _save_reading(db, sensor_data, prediction, source="simulated")
+    
+    # Caută ultima citire reală de la ESP32 în DB
+    stmt = (
+        select(SensorReading)
+        .where(SensorReading.source == "esp32")
+        .order_by(desc(SensorReading.timestamp))
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    last_esp32 = result.scalar_one_or_none()
+
+    if last_esp32:
+        # Reconstituie dict-ul din înregistrarea din DB
+        sensor_data = {
+            "field_id":    last_esp32.field_id,
+            "luminosity":  last_esp32.luminosity,
+            "N":           last_esp32.nitrogen,
+            "P":           last_esp32.phosphorus,
+            "K":           last_esp32.potassium,
+            "ph":          last_esp32.ph,
+            "EC":          last_esp32.ec,
+            "humidity":    last_esp32.humidity,
+            "temperature": last_esp32.temperature,
+        }
+    else:
+        # Nicio citire ESP32 în DB — fallback la simulate
+        sensor_data = generate_fake_sensor_data()
+
+    prediction = _call_ml(sensor_data)
+
+    reading = await _save_reading(
+        db, sensor_data, prediction,
+        source="esp32" if last_esp32 else "simulated"
+    )
 
     return {
         "sensor_data": sensor_data,
